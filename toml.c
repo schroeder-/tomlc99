@@ -33,26 +33,11 @@ SOFTWARE.
 #include <string.h>
 #include "toml.h"
 
-#ifdef TOML_CUSTOM_MEMORY
-toml_memory_t toml_memory = { NULL, NULL, NULL, NULL };
-#define MALLOC(s) toml_memory.malloc(s)
-#define FREE(x) toml_memory.free(x)
-#define CALLOC(n, s) toml_memory.calloc(n, s)
-#define REALLOC(x, s) toml_memory.realloc(x, s)
-#else
-#define MALLOC(s) malloc(s)
-#define FREE(x) free(x)
-#define CALLOC(n, s) calloc(n, s)
-#define REALLOC(x, s) realloc(x, s)
-#endif
-
-
-
 #ifdef _WIN32
 char* strndup(const char* s, size_t n)
 {
     size_t len = strnlen(s, n);
-    char* p = MALLOC(len+1);
+    char* p = malloc(len+1);
     if (p) {
 	memcpy(p, s, len);
 	p[len] = 0;
@@ -278,7 +263,7 @@ struct toml_table_t {
 };
 
 
-static inline void xfree(const void* x) { if (x) FREE((void*)x); }
+static inline void xfree(const void* x) { if (x) free((void*)x); }
 
 
 enum tokentype_t {
@@ -427,7 +412,7 @@ static char* normalize_string(const char* src, int srclen,
 	/* ch was backslash. we expect the escape char. */
 	if (sp >= sq) {
 	    snprintf(errbuf, errbufsz, "last backslash is invalid");
-	    FREE(dst);
+	    free(dst);
 	    return 0;
 	}
 
@@ -451,7 +436,7 @@ static char* normalize_string(const char* src, int srclen,
 		for (int i = 0; i < nhex; i++) {
 		    if (sp >= sq) {
 			snprintf(errbuf, errbufsz, "\\%c expects %d hex chars", ch, nhex);
-			FREE(dst);
+			free(dst);
 			return 0;
 		    }
 		    ch = *sp++;
@@ -460,7 +445,7 @@ static char* normalize_string(const char* src, int srclen,
 			: (('A' <= ch && ch <= 'F') ? ch - 'A' + 10 : -1);
 		    if (-1 == v) {
 			snprintf(errbuf, errbufsz, "invalid hex chars for \\u or \\U");
-			FREE(dst);
+			free(dst);
 			return 0;
 		    }
 		    ucs = ucs * 16 + v;
@@ -468,7 +453,7 @@ static char* normalize_string(const char* src, int srclen,
 		int n = toml_ucs_to_utf8(ucs, &dst[off]);
 		if (-1 == n) {
 		    snprintf(errbuf, errbufsz, "illegal ucs code in \\u or \\U");
-		    FREE(dst);
+		    free(dst);
 		    return 0;
 		}
 		off += n;
@@ -484,7 +469,7 @@ static char* normalize_string(const char* src, int srclen,
 	case '\\': ch = '\\'; break;
 	default: 
 	    snprintf(errbuf, errbufsz, "illegal escape char \\%c", ch);
-	    FREE(dst);
+	    free(dst);
 	    return 0;
 	}
 
@@ -532,7 +517,7 @@ static char* normalize_key(context_t* ctx, token_t strtok)
 
 	/* newlines are not allowed in keys */
 	if (strchr(ret, '\n')) {
-	    FREE(ret);
+	    free(ret);
 	    e_bad_key_error(ctx, lineno);
             return 0;           /* not reached */
 	}
@@ -602,14 +587,14 @@ static int check_key(toml_table_t* tab, const char* key,
 static toml_keyval_t* create_keyval_in_table(context_t* ctx, toml_table_t* tab, token_t keytok)
 {
     /* first, normalize the key to be used for lookup. 
-     * remember to FREE it if we error out. 
+     * remember to free it if we error out. 
      */
     char* newkey = normalize_key(ctx, keytok);
 
     /* if key exists: error out. */
     toml_keyval_t* dest = 0;
     if (check_key(tab, newkey, 0, 0, 0)) {
-	FREE(newkey);
+	free(newkey);
 	e_key_exists_error(ctx, keytok);
         return 0;               /* not reached */
     }
@@ -618,14 +603,14 @@ static toml_keyval_t* create_keyval_in_table(context_t* ctx, toml_table_t* tab, 
     int n = tab->nkval;
     toml_keyval_t** base;
     if (0 == (base = (toml_keyval_t**) realloc(tab->kval, (n+1) * sizeof(*base)))) {
-	FREE(newkey);
+	free(newkey);
 	e_outofmemory(ctx, FLINE);
         return 0;               /* not reached */
     }
     tab->kval = base;
     
     if (0 == (base[n] = (toml_keyval_t*) calloc(1, sizeof(*base[n])))) {
-	FREE(newkey);
+	free(newkey);
 	e_outofmemory(ctx, FLINE);
         return 0;               /* not reached */
     }
@@ -649,7 +634,7 @@ static toml_table_t* create_keytable_in_table(context_t* ctx, toml_table_t* tab,
     /* if key exists: error out */
     toml_table_t* dest = 0;
     if (check_key(tab, newkey, 0, 0, &dest)) {
-	FREE(newkey);		/* don't need this anymore */
+	free(newkey);		/* don't need this anymore */
 	
 	/* special case: if table exists, but was created implicitly ... */
 	if (dest && dest->implicit) {
@@ -665,14 +650,14 @@ static toml_table_t* create_keytable_in_table(context_t* ctx, toml_table_t* tab,
     int n = tab->ntab;
     toml_table_t** base;
     if (0 == (base = (toml_table_t**) realloc(tab->tab, (n+1) * sizeof(*base)))) {
-	FREE(newkey);
+	free(newkey);
 	e_outofmemory(ctx, FLINE);
         return 0;               /* not reached */
     }
     tab->tab = base;
 	
     if (0 == (base[n] = (toml_table_t*) calloc(1, sizeof(*base[n])))) {
-	FREE(newkey);
+	free(newkey);
 	e_outofmemory(ctx, FLINE);
         return 0;               /* not reached */
     }
@@ -699,7 +684,7 @@ static toml_array_t* create_keyarray_in_table(context_t* ctx,
     /* if key exists: error out */
     toml_array_t* dest = 0;
     if (check_key(tab, newkey, 0, &dest, 0)) {
-	FREE(newkey); 		/* don't need this anymore */
+	free(newkey); 		/* don't need this anymore */
 
 	/* special case skip if exists? */
 	if (skip_if_exist) return dest;
@@ -712,14 +697,14 @@ static toml_array_t* create_keyarray_in_table(context_t* ctx,
     int n = tab->narr;
     toml_array_t** base;
     if (0 == (base = (toml_array_t**) realloc(tab->arr, (n+1) * sizeof(*base)))) {
-	FREE(newkey);
+	free(newkey);
 	e_outofmemory(ctx, FLINE);
         return 0;               /* not reached */
     }
     tab->arr = base;
 	
     if (0 == (base[n] = (toml_array_t*) calloc(1, sizeof(*base[n])))) {
-	FREE(newkey);
+	free(newkey);
 	e_outofmemory(ctx, FLINE);
         return 0;               /* not reached */
     }
@@ -1145,7 +1130,7 @@ static void parse_select(context_t* ctx)
     /* For [x.y.z] or [[x.y.z]], remove z from tpath. 
      */
     token_t z = ctx->tpath.tok[ctx->tpath.top-1];
-    FREE(ctx->tpath.key[ctx->tpath.top-1]);
+    free(ctx->tpath.key[ctx->tpath.top-1]);
     ctx->tpath.top--;
     
     walk_tabpath(ctx);
@@ -1301,7 +1286,7 @@ toml_table_t* toml_parse_file(FILE* fp,
 
     /* prime the buf[] */
     bufsz = 1000;
-    if (! (buf = MALLOC(bufsz + 1))) {
+    if (! (buf = malloc(bufsz + 1))) {
         snprintf(errbuf, errbufsz, "out of memory");
         return 0;
     }
@@ -1324,7 +1309,7 @@ toml_table_t* toml_parse_file(FILE* fp,
 	if (ferror(fp)) {
 	    snprintf(errbuf, errbufsz, "%s",
 		     errno ? strerror(errno) : "Error reading file");
-	    FREE(buf);
+	    free(buf);
 	    return 0;
 	}
 	off += n;
@@ -1335,7 +1320,7 @@ toml_table_t* toml_parse_file(FILE* fp,
 
     /* parse it, cleanup and finish */
     toml_table_t* ret = toml_parse(buf, errbuf, errbufsz);
-    FREE(buf);
+    free(buf);
     return ret;
 }
 

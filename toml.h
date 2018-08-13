@@ -31,6 +31,19 @@ SOFTWARE.
 #define TOML_EXTERN extern
 #endif
 
+
+#ifdef TOML_CUSTOM_MEMORY
+typedef struct toml_memory_t toml_memory_t;
+struct toml_memory_t {
+    void*(*malloc)(size_t size);
+    void (*free) (void* ptr);
+    void* (*calloc)(size_t num, size_t size);
+    void* (*realloc) (void* ptr, size_t size);
+};
+
+extern toml_memory_t toml_memory;
+#endif
+
 typedef struct toml_table_t toml_table_t;
 typedef struct toml_array_t toml_array_t;
 

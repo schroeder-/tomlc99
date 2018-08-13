@@ -81,6 +81,8 @@ TOML_EXTERN const char* toml_raw_at(toml_array_t* arr, int idx);
 TOML_EXTERN toml_array_t* toml_array_at(toml_array_t* arr, int idx);
 TOML_EXTERN toml_table_t* toml_table_at(toml_array_t* arr, int idx);
 
+/* Return the size of the array */
+TOML_EXTERN int toml_array_size(toml_array_t* arr);
 
 /* Raw to String. Caller must call free(ret) after use. 
  * Return 0 on success, -1 otherwise.

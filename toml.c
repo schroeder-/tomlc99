@@ -1624,7 +1624,10 @@ char toml_array_kind(toml_array_t* arr)
     return arr->kind;
 }
 
-
+int toml_array_size(toml_array_t* arr) 
+{
+    return arr->nelem;
+}
 
 toml_array_t* toml_array_at(toml_array_t* arr, int idx)
 {

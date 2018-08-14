@@ -1676,7 +1676,7 @@ int toml_rtots(const char* src_, toml_timestamp_t* ret)
 	
 	*ret->day   = val % 100; val /= 100;
 	*ret->month = val % 100; val /= 100;
-	*ret->year  = val;
+	*ret->year  = (int) val;
 	
 	if (*p) {
 	    if (*p != 'T') return -1;
@@ -1702,7 +1702,7 @@ int toml_rtots(const char* src_, toml_timestamp_t* ret)
     
     *ret->second = val % 100; val /= 100;
     *ret->minute = val % 100; val /= 100;
-    *ret->hour   = val;
+    *ret->hour   = (int) val;
     
     /* skip fractional second */
     if (*p == '.') for (p++; '0' <= *p && *p <= '9'; p++);
